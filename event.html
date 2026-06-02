@@ -9,7 +9,7 @@
 
 <div class="container">
 
-  <h1>📍 모임</h1>
+  <h1 id="title">📍 모임</h1>
 
   <div class="card">
     <input id="name" placeholder="이름">
@@ -24,10 +24,23 @@
     <button onclick="filterStatus('confirmed')">확정</button>
   </div>
 
-  <h2>👥 참석자</h2>
+  <div class="card" style="display: flex; align-items: center;">
+    <button onclick="shareLink()">📤 모임 공유</button>
+
+    <button class="danger" onclick="deleteEvent()" style="margin-left: auto;">
+    모임 삭제
+    </button>
+  </div>
+
+  <h2>👥 참석자 
+    <button onclick="copyAllIG(lastDataObj)">전체 IG 복사</button>
+  </h2>
+  
   <div id="list"></div>
 
 </div>
+
+
 
 <script src="config.js"></script>
 <script src="app.js"></script>

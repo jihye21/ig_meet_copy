@@ -83,3 +83,20 @@ button:hover {
   gap: 6px;
   margin: 10px 0;
 }
+
+body.loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+body.loading::after {
+  content: "로딩 중...";
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: black;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 10px;
+}

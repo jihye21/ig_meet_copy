@@ -25,12 +25,15 @@ async function createNewEvent() {
       eventName: name
     })
   });
+
+  location.href = `event.html?id=${id}`;
 }
 
 /* =========================
    JOIN EVENT
 ========================= */
 async function join() {
+  setLoading(true);
   const name = document.getElementById("name").value;
   const instagramId = document.getElementById("ig").value.replace("@","");
 
@@ -46,8 +49,10 @@ async function join() {
       instagramId
     })
   });
-
+  
   const result = await res.json();
+
+  setLoading(false);
 
   if (result.status === "duplicate") {
     alert("⚠️ 이미 참여했습니다");
@@ -58,8 +63,20 @@ async function join() {
 }
 
 /* =========================
+   invite
+========================= */
+function shareLink() {
+  const link = `${location.origin}/event.html?id=${eventId}`;
+
+  navigator.clipboard.writeText(link);
+
+  alert("공유 링크 복사됨");
+}
+
+/* =========================
    REALTIME (FETCH POLLING)
 ========================= */
+let lastData = "";
 async function load() {
   if (!eventId) return; 
 
@@ -72,9 +89,9 @@ async function load() {
     if (!res.ok) throw new Error("네트워크 응답 이상");
     const data = await res.json();
     
-    const currentDataStr = JSON.stringify(data);
-    if (this.lastData !== currentDataStr) {
-      this.lastData = currentDataStr;
+    const currentDataStr = JSON.stringify(data.attendees);
+    if (lastData !== currentDataStr) {
+      lastData = currentDataStr;
       render(data);
     }
   } catch (error) {
@@ -85,24 +102,37 @@ async function load() {
 /* =========================
    RENDER LIST (NOTION STYLE)
 ========================= */
+function setTitle(name) {
+  const titleEl = document.getElementById("title");
+  if (titleEl && name) {
+    titleEl.innerText = `📍 ${name}`;
+  }
+}
+
 function render(data) {
+  lastDataObj = data;
+  setTitle(data.eventName);
+  
   const list = document.getElementById("list");
+  
   if (!list) return;
+
+  const attendees = data.attendees || [];
 
   if (data.length === 0) {
     list.innerHTML = `<div class="card" style="color: #aaa;">아직 참가자가 없습니다.</div>`;
     return;
   }
 
-  list.innerHTML = data.map(u => `
+  list.innerHTML = attendees.map(u => `
     <div class="card">
       <div class="user">
         <div>
-          <div class="name">${u.name || "이름 없음"}</div>
+          <div class="name">${u.name}</div>
           <div class="ig">@${u.instagramId}</div>
         </div>
-        <div class="badge ${u.status || 'pending'}">
-          ${u.status || 'pending'}
+        <div class="badge ${u.status}">
+          ${u.status}
         </div>
       </div>
       <div class="actions">
@@ -123,15 +153,34 @@ function copy(text) {
   alert("복사됨: " + text);
 }
 
+function copyAllIG(data) {
+  const all = data.attendees.map(u => `@${u.instagramId}`).join("\n");
+
+  navigator.clipboard.writeText(all);
+
+  alert("전체 인스타 ID 복사됨");
+}
+
+/* =========================
+   loading
+========================= */
+let loading = false;
+
+function setLoading(state) {
+  loading = state;
+  document.body.classList.toggle("loading", state);
+}
+
 /* =========================
    STATUS TOGGLE
 ========================= */
 async function toggleStatus(instagramId, status) {
+  setLoading(true);
+
   const newStatus = status === "pending" ? "confirmed" : "pending";
 
   await fetch(API_URL, {
     method: "POST",
-    redirect: "follow",
     body: JSON.stringify({
       action: "updateStatus",
       eventId,
@@ -140,6 +189,7 @@ async function toggleStatus(instagramId, status) {
     })
   });
 
+  setLoading(false);
   load();
 }
 
@@ -180,10 +230,6 @@ async function deleteEvent() {
   alert("삭제 완료");
   location.href = "/";
 }
-
-/* =========================
-   INITIALIZATION (초기 실행 제어)
-========================= */
 
 /* =========================
    INITIALIZATION (초기 실행 제어)
