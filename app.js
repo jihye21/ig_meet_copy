@@ -5,10 +5,11 @@ const eventId = new URLSearchParams(location.search).get("id");
 ========================= */
 async function createNewEvent() {
   const name = document.getElementById("eventName").value;
+  if (!name) return alert("모임 이름을 입력해주세요!");
+
   const id = Math.random().toString(36).substring(2, 8);
-
   const link = `${location.origin}/event.html?id=${id}`;
-
+  
   document.getElementById("result").innerHTML = `
     <div class="card">
       <input value="${link}" onclick="this.select()" readonly />
@@ -17,6 +18,7 @@ async function createNewEvent() {
 
   await fetch(API_URL, {
     method: "POST",
+    redirect: "follow",
     body: JSON.stringify({
       action: "createEvent",
       eventId: id,
@@ -32,8 +34,11 @@ async function join() {
   const name = document.getElementById("name").value;
   const instagramId = document.getElementById("ig").value.replace("@","");
 
+  if (!eventId) return alert("올바른 이벤트 접근이 아닙니다.");
+
   const res = await fetch(API_URL, {
     method: "POST",
+    redirect: "follow",
     body: JSON.stringify({
       action: "join",
       eventId,
@@ -53,19 +58,29 @@ async function join() {
 }
 
 /* =========================
-   REALTIME (POLLING)
+   REALTIME (FETCH POLLING)
 ========================= */
-let lastData = "";
+async function load() {
+  if (!eventId) return; 
 
-function load() {
-  const script = document.createElement("script");
-
-  script.src = `${API_URL}?eventId=${eventId}&callback=render`;
-
-  document.body.appendChild(script);
+  try {
+    const res = await fetch(`${API_URL}?eventId=${eventId}`, {
+      method: "GET",
+      redirect: "follow"
+    });
+    
+    if (!res.ok) throw new Error("네트워크 응답 이상");
+    const data = await res.json();
+    
+    const currentDataStr = JSON.stringify(data);
+    if (this.lastData !== currentDataStr) {
+      this.lastData = currentDataStr;
+      render(data);
+    }
+  } catch (error) {
+    console.error("데이터를 가져오는 중 오류 발생:", error);
+  }
 }
-
-setInterval(load, 3000);
 
 /* =========================
    RENDER LIST (NOTION STYLE)
@@ -74,27 +89,28 @@ function render(data) {
   const list = document.getElementById("list");
   if (!list) return;
 
+  if (data.length === 0) {
+    list.innerHTML = `<div class="card" style="color: #aaa;">아직 참가자가 없습니다.</div>`;
+    return;
+  }
+
   list.innerHTML = data.map(u => `
     <div class="card">
-
       <div class="user">
         <div>
-          <div class="name">${u.name}</div>
+          <div class="name">${u.name || "이름 없음"}</div>
           <div class="ig">@${u.instagramId}</div>
         </div>
-
-        <div class="badge ${u.status}">
-          ${u.status}
+        <div class="badge ${u.status || 'pending'}">
+          ${u.status || 'pending'}
         </div>
       </div>
-
       <div class="actions">
         <button onclick="copy('@${u.instagramId}')">복사</button>
         <button onclick="toggleStatus('${u.instagramId}', '${u.status}')">
           상태 변경
         </button>
       </div>
-
     </div>
   `).join("");
 }
@@ -115,6 +131,7 @@ async function toggleStatus(instagramId, status) {
 
   await fetch(API_URL, {
     method: "POST",
+    redirect: "follow",
     body: JSON.stringify({
       action: "updateStatus",
       eventId,
@@ -130,13 +147,17 @@ async function toggleStatus(instagramId, status) {
    FILTER UI
 ========================= */
 function filterStatus(type) {
-  const cards = document.querySelectorAll(".card");
+  const cards = document.querySelectorAll("#list .card");
 
   cards.forEach(c => {
     if (type === "all") {
-      c.style.display = "block";
+      c.style.display = "flex"; 
     } else {
-      c.style.display = c.innerText.includes(type) ? "block" : "none";
+      
+      const badge = c.querySelector(".badge");
+      if (badge) {
+        c.style.display = badge.classList.contains(type) ? "flex" : "none";
+      }
     }
   });
 }
@@ -145,10 +166,11 @@ function filterStatus(type) {
    DELETE EVENT
 ========================= */
 async function deleteEvent() {
-  if (!confirm("모임 삭제?")) return;
+  if (!confirm("모임을 정말 삭제하시겠습니까?")) return;
 
   await fetch(API_URL, {
     method: "POST",
+    redirect: "follow",
     body: JSON.stringify({
       action: "deleteEvent",
       eventId
@@ -159,4 +181,23 @@ async function deleteEvent() {
   location.href = "/";
 }
 
-load();
+/* =========================
+   INITIALIZATION (초기 실행 제어)
+========================= */
+
+/* =========================
+   INITIALIZATION (초기 실행 제어)
+========================= */
+document.addEventListener("DOMContentLoaded", () => {
+  const createBtn = document.getElementById("btnCreateEvent");
+  if (createBtn) {
+    createBtn.addEventListener("click", createNewEvent);
+    console.log("모임 생성 페이지 준비 완료. 생성 버튼 이벤트 연결됨.");
+  }
+
+  if (eventId) {
+    console.log(`이벤트 ID (${eventId}) 감지 - 실시간 데이터 로딩을 시작합니다.`);
+    load();
+    setInterval(load, 3000);
+  }
+});
