@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>모임 참석</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="container">
+
+  <h1>📍 모임</h1>
+
+  <div class="card">
+    <input id="name" placeholder="이름">
+    <input id="ig" placeholder="인스타 ID">
+
+    <button onclick="join()">참석</button>
+  </div>
+
+  <div class="filters">
+    <button onclick="filterStatus('all')">전체</button>
+    <button onclick="filterStatus('pending')">대기</button>
+    <button onclick="filterStatus('confirmed')">확정</button>
+  </div>
+
+  <h2>👥 참석자</h2>
+  <div id="list"></div>
+
+</div>
+
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
