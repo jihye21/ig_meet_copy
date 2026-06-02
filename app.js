@@ -10,6 +10,7 @@ async function createNewEvent() {
   const id = Math.random().toString(36).substring(2, 8);
   const link = `${location.origin}/event.html?id=${id}`;
   
+  setLoading(true);
   document.getElementById("result").innerHTML = `
     <div class="card">
       <input value="${link}" onclick="this.select()" readonly />
@@ -25,7 +26,7 @@ async function createNewEvent() {
       eventName: name
     })
   });
-
+  setLoading(false);
   location.href = `event.html?id=${id}`;
 }
 
@@ -77,6 +78,9 @@ function shareLink() {
    REALTIME (FETCH POLLING)
 ========================= */
 let lastData = "";
+let lastDataObj = null;
+let currentData = [];
+
 async function load() {
   if (!eventId) return; 
 
@@ -112,19 +116,25 @@ function setTitle(name) {
 function render(data) {
   lastDataObj = data;
   setTitle(data.eventName);
-  
-  const list = document.getElementById("list");
-  
-  if (!list) return;
+  currentData = data.attendees || [];
 
-  const attendees = data.attendees || [];
+  const list = document.getElementById("list");
+  if (!list) return;
 
   if (data.length === 0) {
     list.innerHTML = `<div class="card" style="color: #aaa;">아직 참가자가 없습니다.</div>`;
     return;
   }
+  
+  const keyword = document.getElementById("name")?.value || document.getElementById("ig")?.value || "";
 
-  list.innerHTML = attendees.map(u => `
+  const sortedData = [...currentData].sort((a, b) => {
+    const aMatch = a.name.includes(keyword) || a.instagramId.includes(keyword);
+    const bMatch = b.name.includes(keyword) || b.instagramId.includes(keyword);
+    return bMatch - aMatch;
+  });
+
+  list.innerHTML = sortedData.map(u => `
     <div class="card">
       <div class="user">
         <div>
@@ -140,9 +150,35 @@ function render(data) {
         <button onclick="toggleStatus('${u.instagramId}', '${u.status}')">
           상태 변경
         </button>
+
+        <button
+        class="danger"
+        onclick="removeUser('${u.instagramId}')">
+        삭제
+      </button>
       </div>
     </div>
   `).join("");
+}
+
+
+function showSuggestions() {
+  if (lastDataObj) {
+    render(lastDataObj);
+  }
+}
+
+function selectSuggestion(name, instagramId) {
+  const nameInput = document.getElementById("name");
+  const igInput = document.getElementById("ig");
+  
+  if (nameInput) nameInput.value = name;
+  if (igInput) igInput.value = instagramId;
+  
+  const box = document.getElementById("suggestions");
+  if (box) box.innerHTML = "";
+  
+  if (lastDataObj) render(lastDataObj);
 }
 
 /* =========================
@@ -217,7 +253,7 @@ function filterStatus(type) {
 ========================= */
 async function deleteEvent() {
   if (!confirm("모임을 정말 삭제하시겠습니까?")) return;
-
+  setLoading(true);
   await fetch(API_URL, {
     method: "POST",
     redirect: "follow",
@@ -226,9 +262,25 @@ async function deleteEvent() {
       eventId
     })
   });
-
+  setLoading(false);
   alert("삭제 완료");
   location.href = "/";
+}
+
+async function removeUser(instagramId) {
+
+  if (!confirm("삭제할까요?")) return;
+  setLoading(true);
+  await fetch(API_URL, {
+    method: "POST",
+    body: JSON.stringify({
+      action: "deleteUser",
+      eventId,
+      instagramId
+    })
+  });
+  setLoading(false);
+  load();
 }
 
 /* =========================
