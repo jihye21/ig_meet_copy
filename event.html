@@ -14,7 +14,17 @@
 
   <div class="card">
     <input id="name" placeholder="이름" oninput="showSuggestions()">
-    <input id="ig" placeholder="인스타그램 ID (@제외)" oninput="showSuggestions()">
+    <input id="ig" placeholder="인스타그램 ID 또는 프로필 링크" 
+      autocapitalize="off"
+      autocomplete="username"
+      spellcheck="false"
+      oninput="showSuggestions()">
+
+      <div class="ig-helper">
+        <a href="#" onclick="openInstagram(); return false;">
+          내 인스타 ID 확인하기
+        </a>
+      </div>
     <button onclick="join()">참석하기</button>
   </div>
 

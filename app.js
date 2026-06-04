@@ -33,34 +33,80 @@ async function createNewEvent() {
 /* =========================
    JOIN EVENT
 ========================= */
+function normalizeInstagram(value) {
+  return value
+    .trim()
+    .replace(/^https?:\/\/(www\.)?instagram\.com\//i, "")
+    .replace(/^@/, "")
+    .split("/")[0]
+    .split("?")[0];
+}
+
+let joining = false;
 async function join() {
+  if (joining) return;
+
+  joining = true;
   setLoading(true);
-  const name = document.getElementById("name").value;
-  const instagramId = document.getElementById("ig").value.replace("@","");
 
-  if (!eventId) return alert("올바른 이벤트 접근이 아닙니다.");
+  try {
+    const name = document.getElementById("name").value.trim();
+    const instagramId = normalizeInstagram(
+      document.getElementById("ig").value
+    );
 
-  const res = await fetch(API_URL, {
-    method: "POST",
-    redirect: "follow",
-    body: JSON.stringify({
-      action: "join",
-      eventId,
-      name,
-      instagramId
-    })
-  });
-  
-  const result = await res.json();
+    if (!name) {
+      alert("이름을 입력해주세요.");
+      return;
+    }
 
-  setLoading(false);
+    if (!instagramId) {
+      alert("인스타그램 ID를 입력해주세요.");
+      return;
+    }
 
-  if (result.status === "duplicate") {
-    alert("⚠️ 이미 참여했습니다");
-    return;
+    if (!eventId) {
+      alert("올바른 이벤트 접근이 아닙니다.");
+      return;
+    }
+
+    const res = await fetch(API_URL, {
+      method: "POST",
+      redirect: "follow",
+      body: JSON.stringify({
+        action: "join",
+        eventId,
+        name,
+        instagramId
+      })
+    });
+
+    const result = await res.json();
+
+    if (result.status === "duplicate") {
+      alert("⚠️ 이미 참여했습니다");
+      return;
+    }
+
+    load();
+
+  } catch (err) {
+    console.error(err);
+    alert("네트워크 오류가 발생했습니다.");
+  } finally {
+    joining = false;
+    setLoading(false);
   }
+}
 
-  load();
+function openInstagram() {
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+  if (isMobile) {
+    window.location.href = "instagram://";
+  } else {
+    window.open("https://instagram.com", "_blank");
+  }
 }
 
 /* =========================
