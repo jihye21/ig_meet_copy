@@ -200,7 +200,6 @@ function render(data) {
     </div>
 
     <div class="actions">
-      <button onclick="copy('@${u.instagramId}')">아이디 복사</button>
       <button onclick="toggleStatus('${u.instagramId}', '${u.status}')">상태 변경</button>
       
       <button class="danger" style="margin-left: auto;" onclick="removeUser('${u.instagramId}')">
