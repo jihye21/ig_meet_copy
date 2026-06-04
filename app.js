@@ -412,12 +412,12 @@ function bindLongPress() {
 
   const start = (e) => {
     if (longPressTriggered) return;
-    const el = e.target.closest(".user, .name, .ig");
+    const el = e.target.closest(".user");
     if (!el) return;
 
     timer = setTimeout(() => {
       longPressTriggered = true;
-      handleLongPress(el);
+      handleLongPress(e.target);
 
       setTimeout(() => {
         longPressTriggered = false;
