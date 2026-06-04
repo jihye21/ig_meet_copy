@@ -67,7 +67,7 @@ async function join() {
    invite
 ========================= */
 function shareLink() {
-  const link = `${location.origin}/event.html?id=${eventId}`;
+  const link = `${location.href}/event.html?id=${eventId}`;
 
   navigator.clipboard.writeText(link);
 
@@ -144,41 +144,26 @@ function render(data) {
         <div class="badge ${u.status}">
           ${u.status}
         </div>
-      </div>
+        </div>
       <div class="actions">
         <button onclick="copy('@${u.instagramId}')">복사</button>
         <button onclick="toggleStatus('${u.instagramId}', '${u.status}')">
           상태 변경
         </button>
 
-        <button
-        class="danger"
+        <button class="danger" style = "margin-left: auto;"
         onclick="removeUser('${u.instagramId}')">
-        삭제
-      </button>
+            삭제
+        </button>
       </div>
     </div>
   `).join("");
 }
 
-
 function showSuggestions() {
   if (lastDataObj) {
     render(lastDataObj);
   }
-}
-
-function selectSuggestion(name, instagramId) {
-  const nameInput = document.getElementById("name");
-  const igInput = document.getElementById("ig");
-  
-  if (nameInput) nameInput.value = name;
-  if (igInput) igInput.value = instagramId;
-  
-  const box = document.getElementById("suggestions");
-  if (box) box.innerHTML = "";
-  
-  if (lastDataObj) render(lastDataObj);
 }
 
 /* =========================
@@ -189,12 +174,21 @@ function copy(text) {
   alert("복사됨: " + text);
 }
 
-function copyAllIG(data) {
-  const all = data.attendees.map(u => `@${u.instagramId}`).join("\n");
+let currentFilter = "all";
+function copyAllIG(data, statusType) {
+  let filteredList;
+
+  if(statusType === "all"){
+    filteredList = data.attendees;
+  }else{
+    filteredList = data.attendees.filter(u=> u.status === statusType);
+  }
+
+  const all = filteredList.map(u => `@${u.instagramId}`).join("\n");
 
   navigator.clipboard.writeText(all);
 
-  alert("전체 인스타 ID 복사됨");
+  alert(`${statusType === "all" ? "전체" : statusType === "pending" ? "대기" : "참여"} 인스타 ID 복사`);
 }
 
 /* =========================
@@ -233,16 +227,24 @@ async function toggleStatus(instagramId, status) {
    FILTER UI
 ========================= */
 function filterStatus(type) {
+  currentFilter = type;
+
   const cards = document.querySelectorAll("#list .card");
 
   cards.forEach(c => {
+    if (!c.dataset.origDisplay) {
+      c.dataset.origDisplay = window.getComputedStyle(c).display;
+    }
+  });
+
+  cards.forEach(c => {
     if (type === "all") {
-      c.style.display = "flex"; 
+      c.style.display = c.dataset.origDisplay;
     } else {
       
       const badge = c.querySelector(".badge");
       if (badge) {
-        c.style.display = badge.classList.contains(type) ? "flex" : "none";
+        c.style.display = badge.classList.contains(type) ? c.dataset.origDisplay : "none";
       }
     }
   });
