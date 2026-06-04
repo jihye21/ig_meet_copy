@@ -214,19 +214,18 @@ button:active {
 /* --- (대기/확정) --- */
 .badge {
   font-size: 12px;
-  font-weight: 600;
-  padding: 4px 10px;
-  border-radius: 4px;
+  padding: 4px 8px;
+  border-radius: 999px;
 }
 
 .pending {
-  background: #fff3cd;
-  color: #856404;
+  background: #fff4e5;
+  color: #b26a00;
 }
 
 .confirmed {
-  background: #e2f5ea;
-  color: #155724;
+  background: #e6f7ed;
+  color: #1a7f37;
 }
 
 .actions {

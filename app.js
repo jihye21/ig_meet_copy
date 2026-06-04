@@ -155,6 +155,72 @@ function setTitle(name) {
   }
 }
 
+async function saveTitleEdit(value) {
+  try {
+    setTitle(value);
+
+    const res = await fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify({
+        action: "updateEventName",
+        eventId,
+        eventName: value
+      })
+    });
+
+    const result = await res.json();
+
+    if (result.status !== "ok") {
+      console.warn("event name update failed:", result);
+    }
+
+  } catch (err) {
+    console.error("saveTitleEdit error:", err);
+    alert("저장에 실패했어요. 다시 시도해주세요.");
+  }
+}
+
+function enableTitleEdit() {
+  const titleEl = document.getElementById("title");
+
+  const current = titleEl.innerText.replace("📍 ", "");
+
+  titleEl.innerHTML = `
+    <input id="titleInput" value="${current}" />
+  `;
+
+  const input = document.getElementById("titleInput");
+
+  input.focus();
+
+  const submit = () => {
+    const value = input.value.trim();
+    if (value) {
+      saveTitleEdit(value);
+    } else {
+      bindTitleClick();
+    }
+  };
+
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      submit();
+    }
+  });
+
+  input.addEventListener("blur", () => {
+    submit();
+  });
+}
+
+function bindTitleClick() {
+  const titleEl = document.getElementById("title");
+
+  titleEl.onclick = () => {
+    enableTitleEdit();
+  };
+}
+
 function render(data) {
   lastDataObj = data;
   setTitle(data.eventName);
@@ -177,7 +243,7 @@ function render(data) {
   });
 
   list.innerHTML = sortedData.map(u => `
-    <div class="user">
+    <div class="user" data-id="${u.instagramId}">
       <div class="user-info-group">
         <a href="https://instagram.com/${u.instagramId}" class="no-style" target="_blank" rel="noopener noreferrer">
           <div class="avatar">
@@ -194,19 +260,13 @@ function render(data) {
         </button>
       </div>
 
-      <span class="badge ${u.status}">
+      <span class="badge ${u.status}" onclick="toggleStatus('${u.instagramId}', '${u.status}')">
         ${u.status === 'confirmed' ? '확정' : '대기'}
       </span>
     </div>
-
-    <div class="actions">
-      <button onclick="toggleStatus('${u.instagramId}', '${u.status}')">상태 변경</button>
-      
-      <button class="danger" style="margin-left: auto;" onclick="removeUser('${u.instagramId}')">
-        삭제
-      </button>
-    </div>
   `).join("");
+
+  bindLongPress();
 }
 
 function showSuggestions() {
@@ -326,6 +386,38 @@ function updateParticipantStats(nodes) {
 /* =========================
    DELETE EVENT
 ========================= */
+function bindLongPress() {
+  document.querySelectorAll(".user").forEach(el => {
+    let timer = null;
+
+    const start = () => {
+      timer = setTimeout(() => {
+        removeUser(el.dataset.id);
+      }, 600);
+    };
+
+    const cancel = () => {
+      clearTimeout(timer);
+    };
+
+    // 모바일
+    el.addEventListener("touchstart", start);
+    el.addEventListener("touchend", cancel);
+    el.addEventListener("touchmove", cancel);
+
+    // PC
+    el.addEventListener("mousedown", start);
+    el.addEventListener("mouseup", cancel);
+    el.addEventListener("mouseleave", cancel);
+
+    //우클릭
+    el.addEventListener("contextmenu", (e) => {
+      e.preventDefault(); // 기본 우클릭 메뉴 막기
+      removeUser(el.dataset.id);
+    });
+  });
+}
+
 async function deleteEvent() {
   if (!confirm("모임을 정말 삭제하시겠습니까?")) return;
   setLoading(true);
@@ -373,4 +465,14 @@ document.addEventListener("DOMContentLoaded", () => {
     load();
     setInterval(load, 3000);
   }
+});
+
+window.addEventListener("DOMContentLoaded", () => {
+  const saved = localStorage.getItem("eventTitle");
+
+  if (saved) {
+    setTitle(saved);
+  }
+
+  bindTitleClick();
 });
