@@ -100,12 +100,19 @@ async function join() {
 }
 
 function openInstagram() {
-  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+  const isAndroid = /android/i.test(userAgent);
+  const universalUrl = "https://instagram.com/_u/instagram";
+  const androidIntentUrl = 'intent://_u/instagram/#Intent;package=com.instagram.android;scheme=https;end';
 
-  if (isMobile) {
-    window.location.href = "instagram://";
+  if (isAndroid) {
+    window.location.href = androidIntentUrl;
+
+    setTimeout(() => {
+      window.location.href = universalUrl;
+    }, 2000);
   } else {
-    window.open("https://instagram.com", "_blank");
+    window.location.href = universalUrl;
   }
 }
 
