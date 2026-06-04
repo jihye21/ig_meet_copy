@@ -51,6 +51,7 @@ async function join() {
 
   try {
     const name = document.getElementById("name").value.trim();
+    const userId = crypto.randomUUID();
     const instagramId = normalizeInstagram(
       document.getElementById("ig").value
     );
@@ -76,6 +77,7 @@ async function join() {
       body: JSON.stringify({
         action: "join",
         eventId,
+        userId,
         name,
         instagramId
       })
@@ -83,20 +85,24 @@ async function join() {
 
     const result = await res.json();
 
+    document.getElementById("name").value = "";
+    document.getElementById("ig").value = "";
+
     if (result.status === "duplicate") {
       alert("⚠️ 이미 참여했습니다");
       return;
+    }else {
+      alert("🎉 등록 완료");
     }
-
-    load();
 
   } catch (err) {
     console.error(err);
     alert("네트워크 오류가 발생했습니다.");
   } finally {
-    alert("🎉 등록 완료");
     joining = false;
     setLoading(false);
+
+    load();
   }
 }
 
@@ -157,6 +163,9 @@ function setTitle(name) {
 
 async function saveTitleEdit(value) {
   try {
+    value = value.trim();
+    if(!value) return;
+
     setTitle(value);
 
     const res = await fetch(API_URL, {
@@ -176,48 +185,21 @@ async function saveTitleEdit(value) {
 
   } catch (err) {
     console.error("saveTitleEdit error:", err);
-    alert("저장에 실패했어요. 다시 시도해주세요.");
+    alert("저장되지 않았습니다. 다시 시도해주세요.");
   }
-}
-
-function enableTitleEdit() {
-  const titleEl = document.getElementById("title");
-
-  const current = titleEl.innerText.replace("📍 ", "");
-
-  titleEl.innerHTML = `
-    <input id="titleInput" value="${current}" />
-  `;
-
-  const input = document.getElementById("titleInput");
-
-  input.focus();
-
-  const submit = () => {
-    const value = input.value.trim();
-    if (value) {
-      saveTitleEdit(value);
-    } else {
-      bindTitleClick();
-    }
-  };
-
-  input.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-      submit();
-    }
-  });
-
-  input.addEventListener("blur", () => {
-    submit();
-  });
 }
 
 function bindTitleClick() {
   const titleEl = document.getElementById("title");
 
-  titleEl.onclick = () => {
-    enableTitleEdit();
+  titleEl.onclick = async () => {
+    const current = titleEl.innerText.replace("📍 ", "");
+
+    const value = prompt("모임 이름 수정", current);
+
+    if (!value || !value.trim()) return;
+
+    await saveTitleEdit(value.trim());
   };
 }
 
@@ -243,7 +225,7 @@ function render(data) {
   });
 
   list.innerHTML = sortedData.map(u => `
-    <div class="user" data-id="${u.instagramId}">
+    <div class="user" data-user-id="${u.userId}" data-instagram-id="${u.instagramId}">
       <div class="user-info-group">
         <a href="https://instagram.com/${u.instagramId}" class="no-style" target="_blank" rel="noopener noreferrer">
           <div class="avatar">
@@ -260,7 +242,7 @@ function render(data) {
         </button>
       </div>
 
-      <span class="badge ${u.status}" onclick="toggleStatus('${u.instagramId}', '${u.status}')">
+      <span class="badge ${u.status}" onclick="toggleStatus('${u.userId}', '${u.status}')">
         ${u.status === 'confirmed' ? '확정' : '대기'}
       </span>
     </div>
@@ -313,7 +295,7 @@ function setLoading(state) {
 /* =========================
    STATUS TOGGLE
 ========================= */
-async function toggleStatus(instagramId, status) {
+async function toggleStatus(userId, status) {
   setLoading(true);
 
   const newStatus = status === "pending" ? "confirmed" : "pending";
@@ -323,7 +305,7 @@ async function toggleStatus(instagramId, status) {
     body: JSON.stringify({
       action: "updateStatus",
       eventId,
-      instagramId,
+      userId,
       status: newStatus
     })
   });
@@ -384,38 +366,107 @@ function updateParticipantStats(nodes) {
 }
 
 /* =========================
+   UPDATE
+========================= */
+function editName(userId, current) {
+  const name = prompt("이름 수정", current);
+
+  if (!name) return;
+
+  fetch(API_URL, {
+    method: "POST",
+    body: JSON.stringify({
+      action: "updateUserName",
+      eventId,
+      userId,
+      name
+    })
+  });
+
+  load();
+}
+
+function editInstagram(userId, current) {
+  const ig = prompt("인스타그램 ID 수정", current);
+  if (!ig) return;
+
+  fetch(API_URL, {
+    method: "POST",
+    body: JSON.stringify({
+      action: "updateInstagram",
+      eventId,
+      userId,
+      instagramId: ig
+    })
+  });
+
+  load();
+}
+
+/* =========================
    DELETE EVENT
 ========================= */
+let longPressTriggered = false;
 function bindLongPress() {
-  document.querySelectorAll(".user").forEach(el => {
-    let timer = null;
+  let timer = null;
 
-    const start = () => {
-      timer = setTimeout(() => {
-        removeUser(el.dataset.id);
-      }, 600);
-    };
+  const start = (e) => {
+    if (longPressTriggered) return;
+    const el = e.target.closest(".user, .name, .ig");
+    if (!el) return;
 
-    const cancel = () => {
-      clearTimeout(timer);
-    };
+    timer = setTimeout(() => {
+      longPressTriggered = true;
+      handleLongPress(el);
 
-    // 모바일
-    el.addEventListener("touchstart", start);
-    el.addEventListener("touchend", cancel);
-    el.addEventListener("touchmove", cancel);
+      setTimeout(() => {
+        longPressTriggered = false;
+      }, 1000);
+    }, 600);
+  };
 
-    // PC
-    el.addEventListener("mousedown", start);
-    el.addEventListener("mouseup", cancel);
-    el.addEventListener("mouseleave", cancel);
+  const cancel = () => {
+    clearTimeout(timer);
+  };
 
-    //우클릭
-    el.addEventListener("contextmenu", (e) => {
-      e.preventDefault(); // 기본 우클릭 메뉴 막기
-      removeUser(el.dataset.id);
-    });
-  });
+  // 모바일
+  document.addEventListener("touchstart", start, { passive: true });
+  document.addEventListener("touchend", cancel);
+  document.addEventListener("touchmove", cancel);
+
+  // PC
+  document.addEventListener("mousedown", start);
+  document.addEventListener("mouseup", cancel);
+  document.addEventListener("mouseleave", cancel);
+
+    document.addEventListener("click", (e) => {
+    if (longPressTriggered) {
+      e.preventDefault();
+      e.stopPropagation();
+      longPressTriggered = false;
+    }
+  }, true);
+}
+
+function handleLongPress(el) {
+  const userEl = el.closest(".user");
+  if (!userEl) return;
+
+  const userId = userEl.dataset.userId;
+
+  if (el.classList.contains("name")) {
+    const current = el.innerText;
+    editName(userId, current);
+    return;
+  }
+
+  if (el.classList.contains("ig")) {
+    const current = el.innerText.replace("@", "");
+    editInstagram(userId, current);
+    return;
+  }
+
+  removeUser(userId);
 }
 
 async function deleteEvent() {
@@ -434,7 +485,7 @@ async function deleteEvent() {
   location.href = "/";
 }
 
-async function removeUser(instagramId) {
+async function removeUser(userId) {
 
   if (!confirm("삭제할까요?")) return;
   setLoading(true);
@@ -443,7 +494,7 @@ async function removeUser(instagramId) {
     body: JSON.stringify({
       action: "deleteUser",
       eventId,
-      instagramId
+      userId
     })
   });
   setLoading(false);
@@ -476,3 +527,4 @@ window.addEventListener("DOMContentLoaded", () => {
 
   bindTitleClick();
 });
+
