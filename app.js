@@ -100,20 +100,7 @@ async function join() {
 }
 
 function openInstagram() {
-  const userAgent = navigator.userAgent || navigator.vendor || window.opera;
-  const isAndroid = /android/i.test(userAgent);
-  const universalUrl = "https://instagram.com/_u/instagram";
-  const androidIntentUrl = 'intent://_u/instagram/#Intent;package=com.instagram.android;scheme=https;end';
-
-  if (isAndroid) {
-    window.location.href = androidIntentUrl;
-
-    setTimeout(() => {
-      window.location.href = universalUrl;
-    }, 2000);
-  } else {
-    window.location.href = universalUrl;
-  }
+  window.location.href = "https://instagram.com/_u/instagram";
 }
 
 /* =========================
