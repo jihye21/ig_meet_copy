@@ -42,17 +42,30 @@
     </button>
   </div>
 
-  <h2>👥 참석자 
-    <button onclick="copyAllIG(lastDataObj, currentFilter)">전체 IG 복사</button>
+  <h2><div>👥 참석자 <small id="participantStats"></small></div>
+    <button onclick="copyAllIG(lastDataObj, currentFilter)">전체 ID 복사</button>
   </h2>
   
   <div id="list"></div>
-
 </div>
 
 
 
 <script src="config.js"></script>
 <script src="app.js"></script>
+<script>
+  window.onload = function (){
+    document.getElementById("name").value = localStorage.getItem("name") || "";
+    document.getElementById("ig").value = localStorage.getItem("ig") || "";
+  };
+
+  document.getElementById("name").addEventListener("input", function(){
+    localStorage.setItem("name", this.value);
+  });
+
+  document.getElementById("ig").addEventListener("input", function(){
+    localStorage.setItem("ig", this.value);
+  });
+</script>
 </body>
 </html>

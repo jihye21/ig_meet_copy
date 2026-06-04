@@ -94,6 +94,7 @@ async function join() {
     console.error(err);
     alert("네트워크 오류가 발생했습니다.");
   } finally {
+    alert("🎉 등록 완료");
     joining = false;
     setLoading(false);
   }
@@ -137,6 +138,7 @@ async function load() {
     if (lastData !== currentDataStr) {
       lastData = currentDataStr;
       render(data);
+      updateParticipantStats();
     }
   } catch (error) {
     console.error("데이터를 가져오는 중 오류 발생:", error);
@@ -177,16 +179,19 @@ function render(data) {
   list.innerHTML = sortedData.map(u => `
     <div class="user">
       <div class="user-info-group">
-        <div class="avatar">
-          <div class="avatar-inner">
-            ${u.name ? u.name.charAt(0) : '👤'}
+        <a href="https://instagram.com/${u.instagramId}" class="no-style" target="_blank" rel="noopener noreferrer">
+          <div class="avatar">
+            <div class="avatar-inner">
+              👤
+            </div>
           </div>
-        </div>
-        
-        <div class="user-meta">
-          <span class="name">${u.name}</span>
-          <span class="ig">@${u.instagramId}</span>
-        </div>
+        </a>
+        <button class="unstyled-button" onclick="copy('@${u.instagramId}')">
+          <div class="user-meta">
+            <span class="name">${u.name}</span>
+            <span class="ig">@${u.instagramId}</span>
+          </div>
+        </button>
       </div>
 
       <span class="badge ${u.status}">
@@ -294,6 +299,29 @@ function filterStatus(type) {
       }
     }
   });
+}
+
+function updateParticipantStats(nodes) {
+  const users = document.querySelectorAll("#list .user");
+
+  let total = 0;
+  let confirmed = 0;
+  let pending = 0;
+
+  users.forEach(user => {
+    if (user.style.display === "none") return;
+
+    const badge = user.querySelector(".badge");
+    const isConfirmed = badge?.classList.contains("confirmed");
+
+    total++;
+
+    if (isConfirmed) confirmed++;
+    else pending++;
+  });
+
+  document.getElementById("participantStats").textContent =
+    `(${total}명 · 확정 ${confirmed} · 대기 ${pending})`;
 }
 
 /* =========================
