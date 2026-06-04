@@ -67,7 +67,7 @@ async function join() {
    invite
 ========================= */
 function shareLink() {
-  const link = `${location.href}/event.html?id=${eventId}`;
+  const link = `${location.href}`;
 
   navigator.clipboard.writeText(link);
 
@@ -135,27 +135,32 @@ function render(data) {
   });
 
   list.innerHTML = sortedData.map(u => `
-    <div class="card">
-      <div class="user">
-        <div>
-          <div class="name">${u.name}</div>
-          <div class="ig">@${u.instagramId}</div>
+    <div class="user">
+      <div class="user-info-group">
+        <div class="avatar">
+          <div class="avatar-inner">
+            ${u.name ? u.name.charAt(0) : '👤'}
+          </div>
         </div>
-        <div class="badge ${u.status}">
-          ${u.status}
+        
+        <div class="user-meta">
+          <span class="name">${u.name}</span>
+          <span class="ig">@${u.instagramId}</span>
         </div>
-        </div>
-      <div class="actions">
-        <button onclick="copy('@${u.instagramId}')">복사</button>
-        <button onclick="toggleStatus('${u.instagramId}', '${u.status}')">
-          상태 변경
-        </button>
-
-        <button class="danger" style = "margin-left: auto;"
-        onclick="removeUser('${u.instagramId}')">
-            삭제
-        </button>
       </div>
+
+      <span class="badge ${u.status}">
+        ${u.status === 'confirmed' ? '확정' : '대기'}
+      </span>
+    </div>
+
+    <div class="actions">
+      <button onclick="copy('@${u.instagramId}')">아이디 복사</button>
+      <button onclick="toggleStatus('${u.instagramId}', '${u.status}')">상태 변경</button>
+      
+      <button class="danger" style="margin-left: auto;" onclick="removeUser('${u.instagramId}')">
+        삭제
+      </button>
     </div>
   `).join("");
 }
@@ -229,22 +234,23 @@ async function toggleStatus(instagramId, status) {
 function filterStatus(type) {
   currentFilter = type;
 
-  const cards = document.querySelectorAll("#list .card");
+  const users = document.querySelectorAll("#list .user");
 
-  cards.forEach(c => {
-    if (!c.dataset.origDisplay) {
-      c.dataset.origDisplay = window.getComputedStyle(c).display;
-    }
-  });
+  users.forEach(user => {
+    const actions = user.nextElementSibling; 
+    const badge = user.querySelector(".badge");
+    
+    const isMatch = (type === "all") || (badge && badge.classList.contains(type));
 
-  cards.forEach(c => {
-    if (type === "all") {
-      c.style.display = c.dataset.origDisplay;
+    if (isMatch) {
+      user.style.display = "flex";
+      if (actions && actions.classList.contains("actions")) {
+        actions.style.display = "flex";
+      }
     } else {
-      
-      const badge = c.querySelector(".badge");
-      if (badge) {
-        c.style.display = badge.classList.contains(type) ? c.dataset.origDisplay : "none";
+      user.style.display = "none";
+      if (actions && actions.classList.contains("actions")) {
+        actions.style.display = "none";
       }
     }
   });

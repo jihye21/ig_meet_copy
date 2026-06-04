@@ -2,6 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>모임 참석</title>
   <link rel="stylesheet" href="style.css">
 </head>
@@ -13,8 +14,8 @@
 
   <div class="card">
     <input id="name" placeholder="이름" oninput="showSuggestions()">
-    <input id="ig" placeholder="인스타 ID" oninput="showSuggestions()">
-    <button onclick="join()">참석</button>
+    <input id="ig" placeholder="인스타그램 ID (@제외)" oninput="showSuggestions()">
+    <button onclick="join()">참석하기</button>
   </div>
 
   <div class="filters">
@@ -23,7 +24,7 @@
     <button onclick="filterStatus('confirmed')">확정</button>
   </div>
 
-  <div class="card" style="display: flex; align-items: center;">
+  <div class="card" style="display: flex; flex-direction: row; align-items: center; justify-content: space-between;">
     <button onclick="shareLink()">📤 모임 공유</button>
 
     <button class="danger" onclick="deleteEvent()" style="margin-left: auto;">
