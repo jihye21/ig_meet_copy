@@ -92,10 +92,33 @@ async function join() {
       alert("⚠️ 이미 참여했습니다");
       return;
     }else {
+      const optimisticUser = {
+        eventId,
+        userId,
+        name,
+        instagramId,
+        status: "pending"
+      };
+
+      currentData.push(optimisticUser);
+
+      render({
+        eventName: lastDataObj.eventName,
+        attendees: currentData
+      });
       alert("🎉 등록 완료");
     }
 
   } catch (err) {
+    currentData = currentData.filter(
+      u => u.userId !== userId
+    );
+
+    render({
+      eventName: lastDataObj.eventName,
+      attendees: currentData
+    });
+
     console.error(err);
     alert("네트워크 오류가 발생했습니다.");
   } finally {
@@ -140,6 +163,84 @@ async function load() {
     if (!res.ok) throw new Error("네트워크 응답 이상");
     const data = await res.json();
     
+    if (data.status === "error") {
+      console.error(data.message);
+      document.body.innerHTML = `
+          <style>
+            body {
+              margin: 0;
+              min-height: 100vh;
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              background: #f8fafc;
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            }
+
+            .error-card {
+              max-width: 400px;
+              width: 90%;
+              background: white;
+              border-radius: 20px;
+              padding: 40px 30px;
+              text-align: center;
+              box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            }
+
+            .error-icon {
+              font-size: 56px;
+              margin-bottom: 16px;
+            }
+
+            .error-title {
+              font-size: 24px;
+              font-weight: 700;
+              color: #111827;
+              margin-bottom: 10px;
+            }
+
+            .error-message {
+              color: #6b7280;
+              line-height: 1.5;
+              margin-bottom: 28px;
+            }
+
+            .error-btn {
+              display: inline-block;
+              padding: 12px 24px;
+              border-radius: 12px;
+              background: #0095f6;
+              color: white;
+              text-decoration: none;
+              font-weight: 600;
+              transition: 0.2s;
+            }
+
+            .error-btn:hover {
+              background: #0095f6;
+            }
+          </style>
+
+          <div class="error-card">
+            <div class="error-icon">😢</div>
+
+            <div class="error-title">
+              모임을 찾을 수 없어요
+            </div>
+
+            <div class="error-message">
+              ${data.message}
+            </div>
+
+            <a class="error-btn" href="../index.html">
+              모임 생성하러 가기
+            </a>
+          </div>
+        `;
+
+        return;
+    }
+
     const currentDataStr = JSON.stringify(data.attendees);
     if (lastData !== currentDataStr) {
       lastData = currentDataStr;
@@ -247,8 +348,6 @@ function render(data) {
       </span>
     </div>
   `).join("");
-
-  bindLongPress();
 }
 
 function showSuggestions() {
@@ -300,17 +399,40 @@ async function toggleStatus(userId, status) {
 
   const newStatus = status === "pending" ? "confirmed" : "pending";
 
-  await fetch(API_URL, {
-    method: "POST",
-    body: JSON.stringify({
-      action: "updateStatus",
-      eventId,
-      userId,
-      status: newStatus
-    })
-  });
+  try{
+    await fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify({
+        action: "updateStatus",
+        eventId,
+        userId,
+        status: newStatus
+      })
+    });
+    const target = currentData.find(u => u.userId === userId);
+    if (!target) return;
 
-  setLoading(false);
+    const prevStatus = target.status;
+    target.status = newStatus;
+
+    render({
+      eventName: lastDataObj.eventName,
+      attendees: currentData
+    });
+  } catch(err){
+    target.status = prevStatus;
+
+    render({
+      eventName: lastDataObj.eventName,
+      attendees: currentData
+    });
+
+    alert("상태 변경 실패");
+    console.error(err);
+  } finally{
+    setLoading(false);
+  }
+
   load();
 }
 
@@ -373,15 +495,38 @@ function editName(userId, current) {
 
   if (!name) return;
 
-  fetch(API_URL, {
-    method: "POST",
-    body: JSON.stringify({
-      action: "updateUserName",
-      eventId,
-      userId,
-      name
-    })
+  const target = currentData.find(u=> u.userId === userId);
+  if(!target) return;
+
+  const prevName = target.name;
+
+  target.name = name;
+
+  render({
+    eventName: lastDataObj.eventName,
+    attendees: currentData
   });
+
+  try{
+    fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify({
+        action: "updateUserName",
+        eventId,
+        userId,
+        name
+      })
+    });
+  } catch(err){
+    target.name = prevName;
+
+    render({
+      eventName: lastDataObj.eventName,
+      attendees: currentData
+    });
+
+    alert("이름 수정 실패");
+  }
 
   load();
 }
@@ -390,17 +535,38 @@ function editInstagram(userId, current) {
   const ig = prompt("인스타그램 ID 수정", current);
   if (!ig) return;
 
-  fetch(API_URL, {
-    method: "POST",
-    body: JSON.stringify({
-      action: "updateInstagram",
-      eventId,
-      userId,
-      instagramId: ig
-    })
+  const target = currentData.find(u=> u.userId === userId);
+  if(!target) return;
+
+  const prevInstagram = target.instagramId;
+
+  target.instagramId = ig;
+
+  render({
+    eventName: lastDataObj.eventName,
+    attendees: currentData
   });
 
-  load();
+  try{
+    fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify({
+        action: "updateInstagram",
+        eventId,
+        userId,
+        instagramId: ig
+      })
+    });
+  } catch(err){
+    target.instagramId = prevInstagram;
+
+    render({
+      eventName: lastDataObj.eventName,
+      attendees: currentData
+    });
+
+    alert("인스타그램 ID 수정 실패");
+  }
 }
 
 /* =========================
@@ -411,22 +577,18 @@ function bindLongPress() {
   let timer = null;
 
   const start = (e) => {
-    if (longPressTriggered) return;
     const el = e.target.closest(".user");
     if (!el) return;
 
     timer = setTimeout(() => {
-      longPressTriggered = true;
       handleLongPress(e.target);
-
-      setTimeout(() => {
-        longPressTriggered = false;
-      }, 1000);
     }, 600);
   };
 
   const cancel = () => {
     clearTimeout(timer);
+    timer = null;
+    targetEl = null;
   };
 
   // 모바일
@@ -439,30 +601,21 @@ function bindLongPress() {
   document.addEventListener("mouseup", cancel);
   document.addEventListener("mouseleave", cancel);
 
-    document.addEventListener("click", (e) => {
-    if (longPressTriggered) {
-      e.preventDefault();
-      e.stopPropagation();
-      longPressTriggered = false;
-    }
-  }, true);
 }
 
-function handleLongPress(el) {
-  const userEl = el.closest(".user");
+function handleLongPress(target) {
+  const userEl = target.closest(".user");
   if (!userEl) return;
 
   const userId = userEl.dataset.userId;
 
-  if (el.classList.contains("name")) {
-    const current = el.innerText;
-    editName(userId, current);
+  if (target.closest(".name")) {
+    editName(userId, target.innerText);
     return;
   }
 
-  if (el.classList.contains("ig")) {
-    const current = el.innerText.replace("@", "");
-    editInstagram(userId, current);
+  if (target.closest(".ig")) {
+    editInstagram(userId, target.innerText.replace("@", ""));
     return;
   }
 
@@ -488,17 +641,42 @@ async function deleteEvent() {
 async function removeUser(userId) {
 
   if (!confirm("삭제할까요?")) return;
+
+  const index = currentData.findIndex(u=> u.userId === userId);
+  if(index === -1) return;
+
+  const removedUser = currentData[index];
+
+  currentData.splice(index, 1);
+
   setLoading(true);
-  await fetch(API_URL, {
-    method: "POST",
-    body: JSON.stringify({
-      action: "deleteUser",
-      eventId,
-      userId
-    })
-  });
-  setLoading(false);
-  load();
+
+  try{
+    await fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify({
+        action: "deleteUser",
+        eventId,
+        userId
+      })
+    });
+
+    render({
+      eventName: lastDataObj.eventName,
+      attendees: currentData
+    });
+  } catch(err){
+    currentData.splice(index, 0, removedUser);
+
+    render({
+      eventName: lastDataObj.eventName,
+      attendees: currentData
+    });
+
+    alert("삭제 실패");
+  } finally{
+    setLoading(false);
+  }
 }
 
 /* =========================
@@ -510,6 +688,8 @@ document.addEventListener("DOMContentLoaded", () => {
     createBtn.addEventListener("click", createNewEvent);
     console.log("모임 생성 페이지 준비 완료. 생성 버튼 이벤트 연결됨.");
   }
+
+  bindLongPress();
 
   if (eventId) {
     console.log(`이벤트 ID (${eventId}) 감지 - 실시간 데이터 로딩을 시작합니다.`);
