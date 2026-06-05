@@ -5,9 +5,9 @@ const eventId = new URLSearchParams(location.search).get("id");
 ========================= */
 async function createNewEvent() {
   const name = document.getElementById("eventName").value;
-  if (!name) return alert("모임 이름을 입력해주세요!");
+  if (!name) return alert("모임 이름을 입력해주세요.");
 
-  const id = Math.random().toString(36).substring(2, 8);
+  const id = crypto.randomUUID();
   const link = `${location.origin}/event.html?id=${id}`;
   
   setLoading(true);
@@ -141,7 +141,7 @@ function shareLink() {
 
   navigator.clipboard.writeText(link);
 
-  alert("공유 링크 복사됨");
+  alert("공유 링크 복사");
 }
 
 /* =========================
@@ -361,7 +361,7 @@ function showSuggestions() {
 ========================= */
 function copy(text) {
   navigator.clipboard.writeText(text);
-  alert("복사됨: " + text);
+  alert(text + " 복사");
 }
 
 let currentFilter = "all";
@@ -623,7 +623,7 @@ function handleLongPress(target) {
 }
 
 async function deleteEvent() {
-  if (!confirm("모임을 정말 삭제하시겠습니까?")) return;
+  if (!confirm("모임을 삭제하시겠습니까?")) return;
   setLoading(true);
   await fetch(API_URL, {
     method: "POST",
@@ -640,7 +640,7 @@ async function deleteEvent() {
 
 async function removeUser(userId) {
 
-  if (!confirm("삭제할까요?")) return;
+  if (!confirm("삭제하시겠습니까?")) return;
 
   const index = currentData.findIndex(u=> u.userId === userId);
   if(index === -1) return;
