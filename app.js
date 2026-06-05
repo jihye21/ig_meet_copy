@@ -319,10 +319,12 @@ function render(data) {
   
   const keyword = document.getElementById("name")?.value || document.getElementById("ig")?.value || "";
 
+  const match = (u) =>
+    String(u.name ?? "").includes(keyword) ||
+    String(u.instagramId ?? "").includes(keyword);
+
   const sortedData = [...currentData].sort((a, b) => {
-    const aMatch = a.name.includes(keyword) || a.instagramId.includes(keyword);
-    const bMatch = b.name.includes(keyword) || b.instagramId.includes(keyword);
-    return bMatch - aMatch;
+    return match(b) - match(a);
   });
 
   list.innerHTML = sortedData.map(u => `
@@ -395,10 +397,19 @@ function setLoading(state) {
    STATUS TOGGLE
 ========================= */
 async function toggleStatus(userId, status) {
-  setLoading(true);
-
   const newStatus = status === "pending" ? "confirmed" : "pending";
+  
+  const target = currentData.find(u => u.userId === userId);
+  if (!target) return;
 
+  const prevStatus = target.status;
+  target.status = newStatus;
+
+  render({
+    eventName: lastDataObj.eventName,
+    attendees: currentData
+  });
+  
   try{
     await fetch(API_URL, {
       method: "POST",
@@ -409,16 +420,7 @@ async function toggleStatus(userId, status) {
         status: newStatus
       })
     });
-    const target = currentData.find(u => u.userId === userId);
-    if (!target) return;
-
-    const prevStatus = target.status;
-    target.status = newStatus;
-
-    render({
-      eventName: lastDataObj.eventName,
-      attendees: currentData
-    });
+    
   } catch(err){
     target.status = prevStatus;
 
@@ -429,11 +431,7 @@ async function toggleStatus(userId, status) {
 
     alert("상태 변경 실패");
     console.error(err);
-  } finally{
-    setLoading(false);
-  }
-
-  load();
+  } 
 }
 
 /* =========================
@@ -531,24 +529,20 @@ function editName(userId, current) {
   load();
 }
 
-function editInstagram(userId, current) {
+async function editInstagram(userId, current) {
   const ig = prompt("인스타그램 ID 수정", current);
   if (!ig) return;
 
   const target = currentData.find(u=> u.userId === userId);
   if(!target) return;
 
+  setLoading(true);
   const prevInstagram = target.instagramId;
 
   target.instagramId = ig;
 
-  render({
-    eventName: lastDataObj.eventName,
-    attendees: currentData
-  });
-
   try{
-    fetch(API_URL, {
+    const res = await fetch(API_URL, {
       method: "POST",
       body: JSON.stringify({
         action: "updateInstagram",
@@ -557,6 +551,24 @@ function editInstagram(userId, current) {
         instagramId: ig
       })
     });
+    
+    const result = await res.json();
+    setLoading(false);
+    if(result.status === "duplicate") {
+      alert("이미 사용 중인 인스타그램 ID입니다.");
+      return;
+    }
+
+    if(result.status !== "ok"){
+      alert("수정 실패");
+      return;
+    }
+
+    render({
+      eventName: lastDataObj.eventName,
+      attendees: currentData
+    });
+
   } catch(err){
     target.instagramId = prevInstagram;
 
@@ -649,8 +661,11 @@ async function removeUser(userId) {
 
   currentData.splice(index, 1);
 
-  setLoading(true);
-
+  render({
+      eventName: lastDataObj.eventName,
+      attendees: currentData
+    });
+  
   try{
     await fetch(API_URL, {
       method: "POST",
@@ -659,11 +674,6 @@ async function removeUser(userId) {
         eventId,
         userId
       })
-    });
-
-    render({
-      eventName: lastDataObj.eventName,
-      attendees: currentData
     });
   } catch(err){
     currentData.splice(index, 0, removedUser);
@@ -674,8 +684,6 @@ async function removeUser(userId) {
     });
 
     alert("삭제 실패");
-  } finally{
-    setLoading(false);
   }
 }
 
