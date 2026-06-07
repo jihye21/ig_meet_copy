@@ -232,7 +232,7 @@ async function load() {
               ${data.message}
             </div>
 
-            <a class="error-btn" href="../index.html">
+            <a class="error-btn" href="./index.html">
               모임 생성하러 가기
             </a>
           </div>
@@ -645,9 +645,7 @@ async function deleteEvent() {
       eventId
     })
   });
-  alert(location.href);
-  alert(location.pathname);
-  alert(document.baseURI);
+  
   location.href = "./index.html";
   setLoading(false);
   alert("삭제 완료");
