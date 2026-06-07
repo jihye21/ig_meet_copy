@@ -645,7 +645,7 @@ async function deleteEvent() {
       eventId
     })
   });
-  location.href = "../index.html";
+  location.href = "./index.html";
   setLoading(false);
   alert("삭제 완료");
 }
